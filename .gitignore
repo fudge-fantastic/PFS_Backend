@@ -1,19 +1,73 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Python virtual environments
 .Python
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.venv/
+
+# Environment files (contains sensitive data)
 .env
-.venv
-*.log
+.env.local
+.env.production
+
+# IDE and OS files
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Testing
 .pytest_cache/
-uploads/
+.coverage
+htmlcov/
+.tox/
+
+# Database files
 *.db
 *.sqlite3
-alembic.ini
+pixelforge.db
+
+# File uploads (user content)
+uploads/*
+!uploads/.gitkeep
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Docker
+.dockerignore
