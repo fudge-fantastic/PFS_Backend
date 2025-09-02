@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql://pixelforge:password123@db:5432/pixelforge_db
+      - SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
+      - SMTP_SERVER=smtp.office365.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=support@pixelforgestudio.in
+      - SMTP_PASSWORD=your-smtp-password
+      - ADMIN_EMAIL=admin@pfs.in
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=pixelforge_db
+      - POSTGRES_USER=pixelforge
+      - POSTGRES_PASSWORD=password123
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
