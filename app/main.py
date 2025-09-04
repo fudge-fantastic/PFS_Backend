@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="PixelForge E-Commerce Backend",
-    description="A secure and scalable backend API for PixelForge Studio's e-commerce system",
+    title="PixelForge Backend",
+    description="A secure and scalable backend API for PixelForge Studio's system",
     version="1.0.0",
     contact={
         "name": "PixelForge Studio",
@@ -71,12 +71,11 @@ app.include_router(inquiry.router)
 async def root():
     """Welcome message and API info."""
     return {
-        "message": "Welcome to PixelForge E-Commerce Backend",
+        "message": "Welcome to PixelForge Backend",
         "version": "1.0.0",
         "status": "active",
         "docs": "/docs",
         "redoc": "/redoc",
-        "supported_categories": settings.allowed_categories
     }
 
 @app.get("/health", tags=["Health"])

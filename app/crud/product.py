@@ -34,6 +34,30 @@ class ProductCRUD:
         
         return query.count()
     
+    def get_unlocked_products(
+        self, 
+        db: Session, 
+        skip: int = 0, 
+        limit: int = 100, 
+        category: Optional[str] = None
+    ) -> List[Product]:
+        """Get only unlocked products with pagination and optional category filter."""
+        query = db.query(Product).filter(Product.is_locked == False)
+        
+        if category:
+            query = query.filter(Product.category == category)
+        
+        return query.offset(skip).limit(limit).all()
+    
+    def get_unlocked_products_count(self, db: Session, category: Optional[str] = None) -> int:
+        """Get total count of unlocked products."""
+        query = db.query(Product).filter(Product.is_locked == False)
+        
+        if category:
+            query = query.filter(Product.category == category)
+        
+        return query.count()
+    
     def create_product(self, db: Session, product: ProductCreate) -> Product:
         """Create new product."""
         db_product = Product(

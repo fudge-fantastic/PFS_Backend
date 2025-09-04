@@ -1,10 +1,11 @@
-# PixelForge E-Commerce Backend
+# PixelForge Backend
 
-A secure and scalable backend API for PixelForge Studio's e-commerce system built with FastAPI, PostgreSQL, JWT authentication, and SMTP email integration.
+A secure and scalable backend API for PixelForge Studio's system built with FastAPI, PostgreSQL, JWT authentication, and SMTP email integration.
 
 ## Features
 
 - **Product Management**: CRUD operations for products with category validation (Photo Magnets, Fridge Magnets, Retro Prints)
+- **Advanced Product Filtering**: Get unlocked products only, filter by category with flexible options
 - **User Management**: User registration, authentication with JWT, role-based access (Admin/User)
 - **File Upload**: Image upload support for products (max 5 images per product)
 - **Product Locking**: Prevent accidental modifications to products
@@ -139,6 +140,8 @@ MAX_FILE_SIZE=5242880  # 5MB
 ### Products
 - `POST /products/` - Create product (Admin only)
 - `GET /products/` - List products (with category filter)
+- `GET /products/unlocked` - List only unlocked products (with optional category filter)
+- `GET /products/category/{category}` - Get products by specific category (with unlocked_only parameter)
 - `GET /products/{id}` - Get product details
 - `PUT /products/{id}` - Update product (Admin only)
 - `DELETE /products/{id}` - Delete product (Admin only)
@@ -150,6 +153,64 @@ MAX_FILE_SIZE=5242880  # 5MB
 - `GET /health` - Health check
 - `GET /docs` - Swagger UI documentation
 - `GET /redoc` - ReDoc documentation
+
+## New Product Filtering Endpoints
+
+### Get Unlocked Products
+**Endpoint:** `GET /products/unlocked`
+
+**Description:** Retrieve only products that are not locked, useful for displaying editable products in admin interfaces.
+
+**Query Parameters:**
+- `skip` (int, optional): Number of products to skip (default: 0)
+- `limit` (int, optional): Maximum number of products to return (default: 100, max: 1000)
+- `category` (str, optional): Filter by specific category
+
+**Example:**
+```
+GET /products/unlocked?skip=0&limit=10&category=Photo Magnets
+```
+
+### Get Products by Category
+**Endpoint:** `GET /products/category/{category}`
+
+**Description:** Retrieve products filtered by a specific category with additional filtering options.
+
+**Path Parameters:**
+- `category` (str): The product category (Photo Magnets, Fridge Magnets, Retro Prints)
+
+**Query Parameters:**
+- `skip` (int, optional): Number of products to skip (default: 0)
+- `limit` (int, optional): Maximum number of products to return (default: 100, max: 1000)
+- `unlocked_only` (bool, optional): Filter to show only unlocked products (default: false)
+
+**Examples:**
+```
+GET /products/category/Photo Magnets
+GET /products/category/Fridge Magnets?unlocked_only=true&limit=20
+```
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "message": "Retrieved X products in 'Category' category successfully",
+  "data": [
+    {
+      "id": 1,
+      "title": "Product Title",
+      "price": 25.99,
+      "category": "Photo Magnets",
+      "rating": 4.5,
+      "images": ["path/to/image.jpg"],
+      "is_locked": false,
+      "created_at": "2025-09-02T10:00:00",
+      "updated_at": "2025-09-02T10:00:00"
+    }
+  ],
+  "total": 25
+}
+```
 
 ## Product Categories
 

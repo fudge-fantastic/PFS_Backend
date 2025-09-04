@@ -73,7 +73,7 @@ async def submit_inquiry(inquiry: InquiryRequest, background_tasks: BackgroundTa
             detail="Unable to process your inquiry at the moment. Please try again later."
         )
 
-@router.get("/contact/test", tags=["Testing"])
+@router.get("/contact/test", tags=["Inquiry"])
 async def test_email_service():
     """
     Test endpoint to verify email service configuration.
@@ -115,25 +115,25 @@ async def test_email_service():
             detail=f"Email service test failed: {str(e)}"
         )
 
-@router.get("/subjects", tags=["Inquiry"])
-async def get_inquiry_subjects():
-    """
-    Get predefined inquiry subjects for the contact form dropdown.
-    """
-    subjects = [
-        "General Inquiry",
-        "Custom Order Request", 
-        "Product Information",
-        "Technical Support",
-        "Bulk Order Inquiry",
-        "Collaboration Opportunity",
-        "Complaint",
-        "Feedback",
-        "Other"
-    ]
+# @router.get("/subjects", tags=["Inquiry"])
+# async def get_inquiry_subjects():
+#     """
+#     Get predefined inquiry subjects for the contact form dropdown.
+#     """
+#     subjects = [
+#         "General Inquiry",
+#         "Custom Order Request", 
+#         "Product Information",
+#         "Technical Support",
+#         "Bulk Order Inquiry",
+#         "Collaboration Opportunity",
+#         "Complaint",
+#         "Feedback",
+#         "Other"
+#     ]
     
-    return APIResponse(
-        success=True,
-        message="Inquiry subjects retrieved successfully",
-        data={"subjects": subjects}
-    )
+#     return APIResponse(
+#         success=True,
+#         message="Inquiry subjects retrieved successfully",
+#         data={"subjects": subjects}
+#     )

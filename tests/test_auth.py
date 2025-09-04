@@ -7,7 +7,7 @@ def test_root_endpoint(client):
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["message"] == "Welcome to PixelForge E-Commerce Backend"
+    assert data["message"] == "Welcome to PixelForge Backend"
     assert data["version"] == "1.0.0"
     assert "supported_categories" in data
 

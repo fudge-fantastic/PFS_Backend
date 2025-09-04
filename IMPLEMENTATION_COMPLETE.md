@@ -1,4 +1,4 @@
-# 🎉 PixelForge E-Commerce Backend - Implementation Complete!
+# 🎉 PixelForge Backend - Implementation Complete!
 
 ## ✅ What's Been Built
 
@@ -44,6 +44,8 @@ pfs backend/
 - ✅ Product locking mechanism
 - ✅ Price and rating validation
 - ✅ Category filtering
+- ✅ **NEW**: Get unlocked products only endpoint
+- ✅ **NEW**: Get products by category endpoint
 
 #### ✅ User Management
 - ✅ User registration with email validation
@@ -78,6 +80,20 @@ pfs backend/
 - ✅ Postman collection for testing
 - ✅ Development scripts
 - ✅ Comprehensive documentation
+
+### 🆕 New Features Added (Latest Update)
+
+#### Advanced Product Filtering
+- **`GET /products/unlocked`** - Retrieve only unlocked products for admin interfaces
+- **`GET /products/category/{category}`** - Direct category access with flexible filtering
+- **Combined filtering** - Filter by category and locked status simultaneously
+- **Enhanced pagination** - Consistent skip/limit parameters across all endpoints
+
+#### Benefits:
+- **Admin Interface Optimization** - Quickly show only editable products
+- **Frontend Flexibility** - Direct category access without complex queries
+- **Performance** - Efficient database queries with proper indexing
+- **API Consistency** - Follows existing patterns for error handling and responses
 
 ## 🚀 Quick Start
 
@@ -129,6 +145,8 @@ docker-compose up -d
 ### Products
 - `POST /products/` - Create product (Admin only)
 - `GET /products/` - List products (with category filter)
+- `GET /products/unlocked` - **NEW**: List only unlocked products
+- `GET /products/category/{category}` - **NEW**: Get products by specific category
 - `GET /products/{id}` - Get product details
 - `PUT /products/{id}` - Update product (Admin only)
 - `DELETE /products/{id}` - Delete product (Admin only)
@@ -169,6 +187,7 @@ After running the database initialization script:
 ✅ Auto-generated API documentation
 ✅ Database migrations set up
 ✅ Docker containerization ready
+✅ **NEW**: Advanced product filtering endpoints added
 
 ## 🔄 Next Steps
 
@@ -205,5 +224,6 @@ After running the database initialization script:
 5. **Documented**: Auto-generated docs, comprehensive README
 6. **Maintainable**: Clean architecture, separation of concerns
 7. **Production-Ready**: Docker, migrations, error handling
+8. **Advanced Filtering**: New endpoints for flexible product queries
 
-Your PixelForge E-Commerce Backend is now ready for action! 🚀
+Your PixelForge Backend is now ready for action! 🚀

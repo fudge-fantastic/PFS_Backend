@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "pixelforge-api-collection",
-		"name": "PixelForge E-Commerce Backend API",
-		"description": "Complete API collection for PixelForge Studio's e-commerce backend system",
+		"name": "PixelForge Backend API",
+		"description": "Complete API collection for PixelForge Studio's backend system",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -21,7 +21,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"user@pixelforgestudio.in\",\n  \"password\": \"userpassword123\"\n}"
+							"raw": "{\n  \"email\": \"admin@pixelforgestudio.in\",\n  \"password\": \"userpassword123\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/auth/register",
@@ -389,6 +389,128 @@
 							]
 						},
 						"description": "List all products (public access)"
+					}
+				},
+				{
+					"name": "List Unlocked Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/products/unlocked?skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"unlocked"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "List only unlocked products (public access)"
+					}
+				},
+				{
+					"name": "List Unlocked Products by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/products/unlocked?category=Photo Magnets&skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"unlocked"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "Photo Magnets"
+								},
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "List unlocked products filtered by category"
+					}
+				},
+				{
+					"name": "Get Products by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/products/category/Photo Magnets?skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"category",
+								"Photo Magnets"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get products by specific category"
+					}
+				},
+				{
+					"name": "Get Unlocked Products by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/products/category/Photo Magnets?unlocked_only=true&skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"category",
+								"Photo Magnets"
+							],
+							"query": [
+								{
+									"key": "unlocked_only",
+									"value": "true"
+								},
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get only unlocked products by specific category"
 					}
 				},
 				{
