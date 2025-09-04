@@ -122,58 +122,6 @@ async def list_unlocked_products(
             detail=f"Failed to retrieve unlocked products: {str(e)}"
         )
 
-@router.get("/category/{category}", response_model=ProductListResponse)
-async def get_products_by_category(
-    category: str,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    unlocked_only: bool = Query(False, description="Filter to show only unlocked products"),
-    db: Session = Depends(get_db)
-):
-    """Get products by specific category."""
-    try:
-        # Validate category
-        if category not in settings.allowed_categories:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid category '{category}'. Allowed categories: {', '.join(settings.allowed_categories)}"
-            )
-        
-        if unlocked_only:
-            products = product_crud.get_unlocked_products(db, skip=skip, limit=limit, category=category)
-            total_count = product_crud.get_unlocked_products_count(db, category=category)
-            message_suffix = "unlocked products"
-        else:
-            products = product_crud.get_products(db, skip=skip, limit=limit, category=category)
-            total_count = product_crud.get_products_count(db, category=category)
-            message_suffix = "products"
-        
-        products_data = []
-        for product in products:
-            products_data.append({
-                "id": product.id,
-                "title": product.title,
-                "price": product.price,
-                "category": product.category,
-                "rating": product.rating,
-                "images": product.images,
-                "is_locked": product.is_locked,
-                "created_at": product.created_at.isoformat(),
-                "updated_at": product.updated_at.isoformat()
-            })
-        
-        return ProductListResponse(
-            success=True,
-            message=f"Retrieved {len(products)} {message_suffix} in '{category}' category successfully",
-            data=products_data,
-            total=total_count
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve products by category: {str(e)}"
-        )
-
 @router.get("/", response_model=ProductListResponse)
 async def list_products(
     skip: int = Query(0, ge=0),
