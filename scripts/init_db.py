@@ -60,35 +60,35 @@ def create_admin_user():
     finally:
         db.close()
 
-def create_sample_users():
-    """Create sample regular users."""
-    db = SessionLocal()
-    try:
-        sample_users = [
-            {"email": "user1@pixelforgestudio.in", "password": "user123456"},
-            {"email": "user2@pixelforgestudio.in", "password": "user123456"},
-        ]
+# def create_sample_users():
+#     """Create sample regular users."""
+#     db = SessionLocal()
+#     try:
+#         sample_users = [
+#             {"email": "user1@pixelforgestudio.in", "password": "user123456"},
+#             {"email": "user2@pixelforgestudio.in", "password": "user123456"},
+#         ]
         
-        created_users = []
-        for user_data in sample_users:
-            existing_user = user_crud.get_user_by_email(db, user_data["email"])
-            if existing_user:
-                print(f"✓ Sample user already exists: {user_data['email']}")
-                created_users.append(existing_user)
-                continue
+#         created_users = []
+#         for user_data in sample_users:
+#             existing_user = user_crud.get_user_by_email(db, user_data["email"])
+#             if existing_user:
+#                 print(f"✓ Sample user already exists: {user_data['email']}")
+#                 created_users.append(existing_user)
+#                 continue
             
-            user = user_crud.create_user(db, UserCreate(**user_data))
-            created_users.append(user)
-            print(f"✓ Sample user created: {user_data['email']}")
+#             user = user_crud.create_user(db, UserCreate(**user_data))
+#             created_users.append(user)
+#             print(f"✓ Sample user created: {user_data['email']}")
         
-        return created_users
+#         return created_users
         
-    except Exception as e:
-        print(f"✗ Failed to create sample users: {str(e)}")
-        db.rollback()
-        return []
-    finally:
-        db.close()
+#     except Exception as e:
+#         print(f"✗ Failed to create sample users: {str(e)}")
+#         db.rollback()
+#         return []
+#     finally:
+#         db.close()
 
 def main():
     """Main initialization function."""
@@ -101,19 +101,13 @@ def main():
     # Create admin user
     admin = create_admin_user()
     
-    # Create sample users
-    users = create_sample_users()
-    
     print("=" * 50)
     print("📋 Database Initialization Summary:")
     print(f"   • Tables: Created/Verified")
     print(f"   • Admin users: {1 if admin else 0}")
-    print(f"   • Regular users: {len(users)}")
     print()
     print("🔐 Default Credentials:")
     print("   Admin: admin@pfs.in / admin1234")
-    print("   User1: user1@pixelforgestudio.in / user123456")
-    print("   User2: user2@pixelforgestudio.in / user123456")
     print()
     print("⚠️  IMPORTANT: Change default passwords in production!")
     print("✅ Database initialization completed successfully!")

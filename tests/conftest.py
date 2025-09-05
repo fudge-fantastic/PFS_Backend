@@ -49,7 +49,9 @@ def sample_admin():
 def sample_product():
     return {
         "title": "Beautiful Photo Magnet",
+        "description": "A high-quality photo magnet that will preserve your memories beautifully.",
+        "short_description": "High quality photo magnet",
         "price": 25.99,
-        "category": "Photo Magnets",
+        "category_id": 1,  # Assuming category ID 1 exists
         "rating": 4.5
     }

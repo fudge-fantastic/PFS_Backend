@@ -18,9 +18,16 @@ else
     source .venv/bin/activate
 fi
 
-# Install dependencies
+# Install dependencies using venv's python explicitly
 echo "Installing dependencies..."
-pip install -r requirements.txt
+PYBIN="python"
+if [ -f ".venv/Scripts/python.exe" ]; then
+    PYBIN=".venv/Scripts/python.exe"
+elif [ -f ".venv/bin/python" ]; then
+    PYBIN=".venv/bin/python"
+fi
+
+$PYBIN -m pip install -r requirements.txt
 
 # Copy environment file if it doesn't exist
 if [ ! -f ".env" ]; then
@@ -33,7 +40,7 @@ fi
 read -p "Do you want to initialize the database with sample data? (y/n): " init_db
 if [[ $init_db =~ ^[Yy]$ ]]; then
     echo "Initializing database..."
-    python scripts/init_db.py
+    $PYBIN scripts/init_db.py
 fi
 
 # Start the development server
@@ -43,7 +50,7 @@ if [[ $start_server =~ ^[Yy]$ ]]; then
     echo "API will be available at: http://localhost:8000"
     echo "Swagger UI: http://localhost:8000/docs"
     echo "ReDoc: http://localhost:8000/redoc"
-    python run.py
+    $PYBIN run.py
 else
-    echo "Setup completed! To start the server manually, run: python run.py"
+    echo "Setup completed! To start the server manually, run: $PYBIN run.py"
 fi

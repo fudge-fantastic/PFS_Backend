@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Enum, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Enum, Text, JSON, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 import enum
@@ -6,11 +7,6 @@ import enum
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     USER = "USER"
-
-class ProductCategory(str, enum.Enum):
-    PHOTO_MAGNETS = "Photo Magnets"
-    FRIDGE_MAGNETS = "Fridge Magnets"
-    RETRO_PRINTS = "Retro Prints"
 
 class User(Base):
     __tablename__ = "users"
@@ -22,15 +18,33 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+class Category(Base):
+    __tablename__ = "categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationship with products
+    products = relationship("Product", back_populates="category_rel")
+
 class Product(Base):
     __tablename__ = "products"
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(150), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    short_description = Column(String(50), nullable=True)  # 4-6 words limit
     price = Column(Float, nullable=False)
-    category = Column(String(50), nullable=False, index=True)  # Store as string
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
     rating = Column(Float, default=0.0)
     images = Column(JSON, default=list)  # Use JSON for SQLite compatibility
     is_locked = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationship with category
+    category_rel = relationship("Category", back_populates="products")

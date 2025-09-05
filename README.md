@@ -4,10 +4,11 @@ A secure and scalable backend API for PixelForge Studio's system built with Fast
 
 ## Features
 
-- **Product Management**: CRUD operations for products with category validation (Photo Magnets, Fridge Magnets, Retro Prints)
+- **Product Management**: CRUD operations for products with category validation and descriptions
+- **Image Storage**: ImageKit integration for cloud-based image storage and optimization
 - **Advanced Product Filtering**: Get unlocked products only, filter by category with flexible options
 - **User Management**: User registration, authentication with JWT, role-based access (Admin/User)
-- **File Upload**: Image upload support for products (max 5 images per product)
+- **File Upload**: Image upload support for products (max 5 images per product) with ImageKit cloud storage
 - **Product Locking**: Prevent accidental modifications to products
 - **Email Integration**: Welcome emails for new users, admin notifications for new products
 - **API Documentation**: Auto-generated Swagger UI at `/docs`
@@ -20,6 +21,7 @@ A secure and scalable backend API for PixelForge Studio's system built with Fast
 - **Alembic**: Database migration tool
 - **JWT**: JSON Web Tokens for authentication
 - **Passlib**: Password hashing
+- **ImageKit**: Cloud-based image storage and optimization
 - **SMTP**: Email service integration (Office365/Outlook)
 - **Pydantic**: Data validation using Python type hints
 

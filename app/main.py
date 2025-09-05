@@ -6,7 +6,7 @@ import os
 import logging
 from app.database import engine
 from app.models import Base
-from app.routers import auth, users, products, inquiry
+from app.routers import auth, users, products, inquiry, categories
 from app.config import settings
 
 # Configure logging
@@ -64,6 +64,7 @@ if os.path.exists(settings.upload_dir):
 # Include routers
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(categories.router)
 app.include_router(products.router)
 app.include_router(inquiry.router)
 

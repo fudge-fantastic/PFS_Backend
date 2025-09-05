@@ -23,8 +23,10 @@ class Settings(BaseSettings):
     max_file_size: int = 5242880  # 5MB
     allowed_image_extensions: str = "jpg,jpeg,png,gif,webp"
     
-    # Product Categories
-    allowed_categories: List[str] = ["Photo Magnets", "Fridge Magnets", "Retro Prints"]
+    # ImageKit Configuration
+    imagekit_private_key: str = ""
+    imagekit_public_key: str = ""
+    imagekit_url_endpoint: str = ""
     
     class Config:
         env_file = ".env"

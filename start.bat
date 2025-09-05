@@ -8,13 +8,13 @@ if not exist ".venv" (
     python -m venv .venv
 )
 
-REM Activate virtual environment
-echo Activating virtual environment...
+REM Activate virtual environment (optional)
+echo Activating virtual environment (optional)...
 call .venv\Scripts\activate
 
-REM Install dependencies
+REM Install dependencies using venv's python explicitly
 echo Installing dependencies...
-pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 
 REM Copy environment file if it doesn't exist
 if not exist ".env" (
@@ -27,7 +27,7 @@ REM Initialize database (optional)
 set /p init_db="Do you want to initialize the database with sample data? (y/n): "
 if /i "%init_db%"=="y" (
     echo Initializing database...
-    python scripts\init_db.py
+    .venv\Scripts\python.exe scripts\init_db.py
 )
 
 REM Start the development server
@@ -37,9 +37,9 @@ if /i "%start_server%"=="y" (
     echo API will be available at: http://localhost:8000
     echo Swagger UI: http://localhost:8000/docs
     echo ReDoc: http://localhost:8000/redoc
-    python run.py
+    .venv\Scripts\python.exe run.py
 ) else (
-    echo Setup completed! To start the server manually, run: python run.py
+    echo Setup completed! To start the server manually, run: .venv\Scripts\python.exe run.py
 )
 
 pause

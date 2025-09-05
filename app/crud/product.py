@@ -1,36 +1,36 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 from typing import List, Optional
-from app.models import Product, ProductCategory
+from app.models import Product, Category
 from app.schemas import ProductCreate, ProductUpdate
 from app.services.upload import upload_service
 
 class ProductCRUD:
     def get_product_by_id(self, db: Session, product_id: int) -> Optional[Product]:
-        """Get product by ID."""
-        return db.query(Product).filter(Product.id == product_id).first()
+        """Get product by ID with category information."""
+        return db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == product_id).first()
     
     def get_products(
         self, 
         db: Session, 
         skip: int = 0, 
         limit: int = 100, 
-        category: Optional[str] = None  # Changed from ProductCategory to str
+        category_id: Optional[int] = None
     ) -> List[Product]:
         """Get all products with pagination and optional category filter."""
-        query = db.query(Product)
+        query = db.query(Product).options(joinedload(Product.category_rel))
         
-        if category:
-            query = query.filter(Product.category == category)
+        if category_id:
+            query = query.filter(Product.category_id == category_id)
         
         return query.offset(skip).limit(limit).all()
     
-    def get_products_count(self, db: Session, category: Optional[str] = None) -> int:  # Changed from ProductCategory to str
+    def get_products_count(self, db: Session, category_id: Optional[int] = None) -> int:
         """Get total count of products."""
         query = db.query(Product)
         
-        if category:
-            query = query.filter(Product.category == category)
+        if category_id:
+            query = query.filter(Product.category_id == category_id)
         
         return query.count()
     
@@ -39,31 +39,42 @@ class ProductCRUD:
         db: Session, 
         skip: int = 0, 
         limit: int = 100, 
-        category: Optional[str] = None
+        category_id: Optional[int] = None
     ) -> List[Product]:
         """Get only unlocked products with pagination and optional category filter."""
-        query = db.query(Product).filter(Product.is_locked == False)
+        query = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.is_locked == False)
         
-        if category:
-            query = query.filter(Product.category == category)
+        if category_id:
+            query = query.filter(Product.category_id == category_id)
         
         return query.offset(skip).limit(limit).all()
     
-    def get_unlocked_products_count(self, db: Session, category: Optional[str] = None) -> int:
+    def get_unlocked_products_count(self, db: Session, category_id: Optional[int] = None) -> int:
         """Get total count of unlocked products."""
         query = db.query(Product).filter(Product.is_locked == False)
         
-        if category:
-            query = query.filter(Product.category == category)
+        if category_id:
+            query = query.filter(Product.category_id == category_id)
         
         return query.count()
     
     def create_product(self, db: Session, product: ProductCreate) -> Product:
         """Create new product."""
+        # Validate that category exists and is active
+        category = db.query(Category).filter(
+            Category.id == product.category_id,
+            Category.is_active == True
+        ).first()
+        
+        if not category:
+            raise ValueError(f"Category with ID {product.category_id} not found or inactive")
+        
         db_product = Product(
             title=product.title,
+            description=product.description,
+            short_description=product.short_description,
             price=product.price,
-            category=product.category.value if hasattr(product.category, 'value') else product.category,  # Handle both enum and string
+            category_id=product.category_id,
             rating=product.rating,
             images=product.images or [],
             is_locked=False
@@ -82,6 +93,16 @@ class ProductCRUD:
         # Check if product is locked
         if db_product.is_locked:
             raise ValueError("Cannot update locked product")
+        
+        # Validate category if being updated
+        if product_update.category_id:
+            category = db.query(Category).filter(
+                Category.id == product_update.category_id,
+                Category.is_active == True
+            ).first()
+            
+            if not category:
+                raise ValueError(f"Category with ID {product_update.category_id} not found or inactive")
         
         update_data = product_update.dict(exclude_unset=True)
         

@@ -7,11 +7,6 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
     USER = "USER"
 
-class ProductCategory(str, Enum):
-    PHOTO_MAGNETS = "Photo Magnets"
-    FRIDGE_MAGNETS = "Fridge Magnets"
-    RETRO_PRINTS = "Retro Prints"
-
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
@@ -41,12 +36,44 @@ class User(UserBase):
 class UserInDB(User):
     hashed_password: str
 
+# Category Schemas
+class CategoryBase(BaseModel):
+    name: str = Field(..., max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    is_active: Optional[bool] = None
+
+class Category(CategoryBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 # Product Schemas
 class ProductBase(BaseModel):
     title: str = Field(..., max_length=150)
+    description: Optional[str] = Field(None, max_length=1000)
+    short_description: Optional[str] = Field(None, max_length=50)
     price: float = Field(..., gt=0)
-    category: ProductCategory
+    category_id: int = Field(..., gt=0)
     rating: Optional[float] = Field(0.0, ge=0.0, le=5.0)
+    
+    @validator('short_description')
+    def validate_short_description(cls, v):
+        if v:
+            word_count = len(v.split())
+            if word_count < 4 or word_count > 6:
+                raise ValueError('Short description must be 4-6 words')
+        return v
 
 class ProductCreate(ProductBase):
     images: Optional[List[str]] = Field(default=[], max_items=5)
@@ -59,11 +86,21 @@ class ProductCreate(ProductBase):
 
 class ProductUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=150)
+    description: Optional[str] = Field(None, max_length=1000)
+    short_description: Optional[str] = Field(None, max_length=50)
     price: Optional[float] = Field(None, gt=0)
-    category: Optional[ProductCategory] = None
+    category_id: Optional[int] = Field(None, gt=0)
     rating: Optional[float] = Field(None, ge=0.0, le=5.0)
     images: Optional[List[str]] = Field(None, max_items=5)
     is_locked: Optional[bool] = None
+    
+    @validator('short_description')
+    def validate_short_description(cls, v):
+        if v:
+            word_count = len(v.split())
+            if word_count < 4 or word_count > 6:
+                raise ValueError('Short description must be 4-6 words')
+        return v
 
 class Product(ProductBase):
     id: int
@@ -71,6 +108,9 @@ class Product(ProductBase):
     is_locked: bool
     created_at: datetime
     updated_at: datetime
+    
+    # Include category details
+    category_rel: Optional[Category] = None
     
     class Config:
         from_attributes = True
@@ -142,4 +182,10 @@ class UserListResponse(BaseModel):
     success: bool
     message: str
     data: List[User]
+    total: int
+
+class CategoryListResponse(BaseModel):
+    success: bool
+    message: str
+    data: List[Category]
     total: int
