@@ -4,7 +4,7 @@ from typing import List, Optional
 import time
 from app.database import get_db
 from app.schemas import (
-    ProductCreate, ProductUpdate, Product, 
+    ProductCreate, ProductUpdate, Product, ProductResponse,
     ProductListResponse, APIResponse
 )
 from app.crud.product import product_crud
@@ -23,6 +23,23 @@ except ImportError:
     IMAGEKIT_AVAILABLE = False
 
 router = APIRouter(prefix="/products", tags=["Products"])
+
+def product_to_response(product: Product) -> ProductResponse:
+    """Convert Product model to ProductResponse with category name."""
+    return ProductResponse(
+        id=product.id,
+        title=product.title,
+        description=product.description,
+        short_description=product.short_description,
+        price=product.price,
+        category_id=product.category_id,
+        category_name=product.category_rel.name if product.category_rel else None,
+        rating=product.rating,
+        images=product.images,
+        is_locked=product.is_locked,
+        created_at=product.created_at,
+        updated_at=product.updated_at
+    )
 
 @router.post("/", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
@@ -101,22 +118,13 @@ async def create_product(
         
         db_product = product_crud.create_product(db, product_data)
         
+        # Convert to response format with category name
+        product_data = product_to_response(db_product)
+        
         return APIResponse(
             success=True,
             message="Product created successfully",
-            data={
-                "id": db_product.id,
-                "title": db_product.title,
-                "description": db_product.description,
-                "short_description": db_product.short_description,
-                "price": db_product.price,
-                "category_id": db_product.category_id,
-                "category_name": db_product.category_rel.name if db_product.category_rel else None,
-                "rating": db_product.rating,
-                "images": db_product.images,
-                "is_locked": db_product.is_locked,
-                "created_at": db_product.created_at.isoformat()
-            }
+            data=product_data.dict()
         )
     except HTTPException:
         # Re-raise HTTPException as-is
@@ -163,22 +171,8 @@ async def list_unlocked_products(
         products = product_crud.get_unlocked_products(db, skip=skip, limit=limit, category_id=category_id)
         total_count = product_crud.get_unlocked_products_count(db, category_id=category_id)
         
-        products_data = []
-        for product in products:
-            products_data.append({
-                "id": product.id,
-                "title": product.title,
-                "description": product.description,
-                "short_description": product.short_description,
-                "price": product.price,
-                "category_id": product.category_id,
-                "category_name": product.category_rel.name if product.category_rel else None,
-                "rating": product.rating,
-                "images": product.images,
-                "is_locked": product.is_locked,
-                "created_at": product.created_at.isoformat(),
-                "updated_at": product.updated_at.isoformat()
-            })
+        # Convert products to response format with category names
+        products_data = [product_to_response(product) for product in products]
         
         return ProductListResponse(
             success=True,
@@ -213,22 +207,8 @@ async def list_products(
         products = product_crud.get_products(db, skip=skip, limit=limit, category_id=category_id)
         total_count = product_crud.get_products_count(db, category_id=category_id)
         
-        products_data = []
-        for product in products:
-            products_data.append({
-                "id": product.id,
-                "title": product.title,
-                "description": product.description,
-                "short_description": product.short_description,
-                "price": product.price,
-                "category_id": product.category_id,
-                "category_name": product.category_rel.name if product.category_rel else None,
-                "rating": product.rating,
-                "images": product.images,
-                "is_locked": product.is_locked,
-                "created_at": product.created_at.isoformat(),
-                "updated_at": product.updated_at.isoformat()
-            })
+        # Convert products to response format with category names
+        products_data = [product_to_response(product) for product in products]
         
         return ProductListResponse(
             success=True,
@@ -255,23 +235,13 @@ async def get_product(
             detail="Product not found"
         )
     
+    # Convert to response format with category name
+    product_data = product_to_response(product)
+    
     return APIResponse(
         success=True,
         message="Product details retrieved successfully",
-        data={
-            "id": product.id,
-            "title": product.title,
-            "description": product.description,
-            "short_description": product.short_description,
-            "price": product.price,
-            "category_id": product.category_id,
-            "category_name": product.category_rel.name if product.category_rel else None,
-            "rating": product.rating,
-            "images": product.images,
-            "is_locked": product.is_locked,
-            "created_at": product.created_at.isoformat(),
-            "updated_at": product.updated_at.isoformat()
-        }
+        data=product_data.dict()
     )
 
 @router.put("/{product_id}", response_model=APIResponse)
@@ -352,22 +322,13 @@ async def update_product(
         product_update = ProductUpdate(**update_data)
         updated_product = product_crud.update_product(db, product_id, product_update)
         
+        # Convert to response format with category name
+        product_data = product_to_response(updated_product)
+        
         return APIResponse(
             success=True,
             message="Product updated successfully",
-            data={
-                "id": updated_product.id,
-                "title": updated_product.title,
-                "description": updated_product.description,
-                "short_description": updated_product.short_description,
-                "price": updated_product.price,
-                "category_id": updated_product.category_id,
-                "category_name": updated_product.category_rel.name if updated_product.category_rel else None,
-                "rating": updated_product.rating,
-                "images": updated_product.images,
-                "is_locked": updated_product.is_locked,
-                "updated_at": updated_product.updated_at.isoformat()
-            }
+            data=product_data.dict()
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -426,6 +387,8 @@ async def lock_product(
             data={
                 "id": locked_product.id,
                 "title": locked_product.title,
+                "category_id": locked_product.category_id,
+                "category_name": locked_product.category_rel.name if locked_product.category_rel else None,
                 "is_locked": locked_product.is_locked
             }
         )
@@ -456,6 +419,8 @@ async def unlock_product(
             data={
                 "id": unlocked_product.id,
                 "title": unlocked_product.title,
+                "category_id": unlocked_product.category_id,
+                "category_name": unlocked_product.category_rel.name if unlocked_product.category_rel else None,
                 "is_locked": unlocked_product.is_locked
             }
         )
@@ -463,39 +428,4 @@ async def unlock_product(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to unlock product: {str(e)}"
-        )
-
-@router.get("/imagekit/auth", response_model=APIResponse)
-async def get_imagekit_auth(
-    current_user: UserModel = Depends(get_current_admin_user)
-):
-    """Get ImageKit authentication parameters for client-side uploads (Admin only)."""
-    if not IMAGEKIT_AVAILABLE:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ImageKit service not available"
-        )
-    
-    try:
-        imagekit_service = get_imagekit_service()
-        token = f"upload_token_{int(time.time())}"
-        expire = int(time.time()) + 3600  # 1 hour expiry
-        
-        auth_params = imagekit_service.get_upload_signature(token, expire)
-        
-        return APIResponse(
-            success=True,
-            message="ImageKit authentication parameters retrieved successfully",
-            data={
-                "signature": auth_params["signature"],
-                "expire": auth_params["expire"],
-                "token": auth_params["token"],
-                "public_key": settings.imagekit_public_key,
-                "url_endpoint": settings.imagekit_url_endpoint
-            }
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get ImageKit authentication: {str(e)}"
         )

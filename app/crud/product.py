@@ -8,7 +8,7 @@ from app.services.upload import upload_service
 class ProductCRUD:
     def get_product_by_id(self, db: Session, product_id: int) -> Optional[Product]:
         """Get product by ID with category information."""
-        return db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == product_id).first()
+        return db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel)).filter(Product.id == product_id).first()
     
     def get_products(
         self, 
@@ -18,7 +18,7 @@ class ProductCRUD:
         category_id: Optional[int] = None
     ) -> List[Product]:
         """Get all products with pagination and optional category filter."""
-        query = db.query(Product).options(joinedload(Product.category_rel))
+        query = db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel))
         
         if category_id:
             query = query.filter(Product.category_id == category_id)
@@ -42,7 +42,7 @@ class ProductCRUD:
         category_id: Optional[int] = None
     ) -> List[Product]:
         """Get only unlocked products with pagination and optional category filter."""
-        query = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.is_locked == False)
+        query = db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel)).filter(Product.is_locked == False)
         
         if category_id:
             query = query.filter(Product.category_id == category_id)
@@ -82,6 +82,9 @@ class ProductCRUD:
         db.add(db_product)
         db.commit()
         db.refresh(db_product)
+        
+        # Load the category relationship
+        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
         return db_product
     
     def update_product(self, db: Session, product_id: int, product_update: ProductUpdate) -> Optional[Product]:
@@ -111,6 +114,9 @@ class ProductCRUD:
         
         db.commit()
         db.refresh(db_product)
+        
+        # Reload with category relationship
+        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
         return db_product
     
     def delete_product(self, db: Session, product_id: int) -> bool:
@@ -140,6 +146,9 @@ class ProductCRUD:
         db_product.is_locked = True
         db.commit()
         db.refresh(db_product)
+        
+        # Reload with category relationship
+        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
         return db_product
     
     def unlock_product(self, db: Session, product_id: int) -> Optional[Product]:
@@ -151,6 +160,9 @@ class ProductCRUD:
         db_product.is_locked = False
         db.commit()
         db.refresh(db_product)
+        
+        # Reload with category relationship
+        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
         return db_product
 
 product_crud = ProductCRUD()

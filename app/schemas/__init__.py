@@ -112,6 +112,11 @@ class Product(ProductBase):
     # Include category details
     category_rel: Optional[Category] = None
     
+    # Add computed property for category name
+    @property
+    def category_name(self) -> Optional[str]:
+        return self.category_rel.name if self.category_rel else None
+    
     class Config:
         from_attributes = True
 
@@ -172,10 +177,27 @@ class APIResponse(BaseModel):
     message: str
     data: Optional[dict] = None
 
+class ProductResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    short_description: Optional[str]
+    price: float
+    category_id: int
+    category_name: Optional[str]
+    rating: float
+    images: List[str]
+    is_locked: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class ProductListResponse(BaseModel):
     success: bool
     message: str
-    data: List[Product]
+    data: List[ProductResponse]
     total: int
 
 class UserListResponse(BaseModel):

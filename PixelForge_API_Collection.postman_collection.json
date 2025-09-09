@@ -144,6 +144,58 @@
 						},
 						"description": "Login admin user and get JWT token"
 					}
+				},
+				{
+					"name": "Get Access Token (OAuth2)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"oauth_token\", jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "username",
+									"value": "admin@pfs.in",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "adminpassword123",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"token"
+							]
+						},
+						"description": "OAuth2 compatible token endpoint"
+					}
 				}
 			],
 			"description": "Authentication endpoints"
@@ -206,9 +258,268 @@
 						},
 						"description": "List all users (Admin only)"
 					}
+				},
+				{
+					"name": "Get User by ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							]
+						},
+						"description": "Get user details by ID (Admin only)"
+					}
 				}
 			],
 			"description": "User management endpoints"
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Create Category (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Photo Frames\",\n  \"description\": \"Custom photo frames for memorable moments\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/categories/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								""
+							]
+						},
+						"description": "Create a new category (Admin only)"
+					}
+				},
+				{
+					"name": "List All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/?skip=0&limit=10&active_only=false",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								""
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "active_only",
+									"value": "false"
+								}
+							]
+						},
+						"description": "List all categories with optional filtering"
+					}
+				},
+				{
+					"name": "List Active Categories Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/?active_only=true&skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								""
+							],
+							"query": [
+								{
+									"key": "active_only",
+									"value": "true"
+								},
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "List only active categories"
+					}
+				},
+				{
+					"name": "List Active Categories (Dedicated Endpoint)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/active?skip=0&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"active"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "List only active categories (public endpoint)"
+					}
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1"
+							]
+						},
+						"description": "Get category details by ID"
+					}
+				},
+				{
+					"name": "Update Category (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Photo Frames\",\n  \"description\": \"Updated description for photo frames\",\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/categories/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1"
+							]
+						},
+						"description": "Update category (Admin only)"
+					}
+				},
+				{
+					"name": "Soft Delete Category (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories/1?hard_delete=false",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1"
+							],
+							"query": [
+								{
+									"key": "hard_delete",
+									"value": "false"
+								}
+							]
+						},
+						"description": "Soft delete category (deactivate) - Admin only"
+					}
+				},
+				{
+					"name": "Hard Delete Category (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories/1?hard_delete=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1"
+							],
+							"query": [
+								{
+									"key": "hard_delete",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Permanently delete category - Admin only (use with caution)"
+					}
+				}
+			],
+			"description": "Category management endpoints"
 		},
 		{
 			"name": "Products",
@@ -237,8 +548,8 @@
 									"type": "text"
 								},
 								{
-									"key": "category",
-									"value": "Photo Magnets",
+									"key": "category_id",
+									"value": "1",
 									"type": "text"
 								},
 								{
@@ -268,6 +579,64 @@
 					}
 				},
 				{
+					"name": "Create Product with Description (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Custom Memory Canvas",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Transform your favorite memories into beautiful canvas prints. High-quality materials and vibrant colors ensure your photos look stunning for years to come.",
+									"type": "text"
+								},
+								{
+									"key": "short_description",
+									"value": "Custom memory canvas prints",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "45.99",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "rating",
+									"value": "4.8",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/products/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								""
+							]
+						},
+						"description": "Create product with full description and short description"
+					}
+				},
+				{
 					"name": "Create Fridge Magnet (Admin)",
 					"request": {
 						"method": "POST",
@@ -291,8 +660,8 @@
 									"type": "text"
 								},
 								{
-									"key": "category",
-									"value": "Fridge Magnets",
+									"key": "category_id",
+									"value": "2",
 									"type": "text"
 								},
 								{
@@ -339,8 +708,8 @@
 									"type": "text"
 								},
 								{
-									"key": "category",
-									"value": "Retro Prints",
+									"key": "category_id",
+									"value": "3",
 									"type": "text"
 								},
 								{
@@ -425,7 +794,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/products/unlocked?category=Photo Magnets&skip=0&limit=10",
+							"raw": "{{base_url}}/products/unlocked?category_id=1&skip=0&limit=10",
 							"host": [
 								"{{base_url}}"
 							],
@@ -435,8 +804,8 @@
 							],
 							"query": [
 								{
-									"key": "category",
-									"value": "Photo Magnets"
+									"key": "category_id",
+									"value": "1"
 								},
 								{
 									"key": "skip",
@@ -448,69 +817,7 @@
 								}
 							]
 						},
-						"description": "List unlocked products filtered by category"
-					}
-				},
-				{
-					"name": "Get Products by Category",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/products/category/Photo Magnets?skip=0&limit=10",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"products",
-								"category",
-								"Photo Magnets"
-							],
-							"query": [
-								{
-									"key": "skip",
-									"value": "0"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								}
-							]
-						},
-						"description": "Get products by specific category"
-					}
-				},
-				{
-					"name": "Get Unlocked Products by Category",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/products/category/Photo Magnets?unlocked_only=true&skip=0&limit=10",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"products",
-								"category",
-								"Photo Magnets"
-							],
-							"query": [
-								{
-									"key": "unlocked_only",
-									"value": "true"
-								},
-								{
-									"key": "skip",
-									"value": "0"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								}
-							]
-						},
-						"description": "Get only unlocked products by specific category"
+						"description": "List unlocked products filtered by category ID"
 					}
 				},
 				{
@@ -519,7 +826,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/products/?category=Photo Magnets",
+							"raw": "{{base_url}}/products/?category_id=1&skip=0&limit=10",
 							"host": [
 								"{{base_url}}"
 							],
@@ -529,12 +836,20 @@
 							],
 							"query": [
 								{
-									"key": "category",
-									"value": "Photo Magnets"
+									"key": "category_id",
+									"value": "1"
+								},
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
 								}
 							]
 						},
-						"description": "List products filtered by category"
+						"description": "List products filtered by category ID"
 					}
 				},
 				{
@@ -673,6 +988,85 @@
 			"description": "Product management endpoints"
 		},
 		{
+			"name": "Inquiry",
+			"item": [
+				{
+					"name": "Submit Contact Inquiry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone_number\": \"+1234567890\",\n  \"subject\": \"Product Inquiry\",\n  \"message\": \"I am interested in your custom photo magnets. Could you please provide more information about pricing and customization options?\",\n  \"subscribe_newsletter\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inquiry/contact",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"inquiry",
+								"contact"
+							]
+						},
+						"description": "Submit a customer inquiry/contact form"
+					}
+				},
+				{
+					"name": "Submit General Inquiry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"subject\": \"Business Partnership\",\n  \"message\": \"Hello, I'm interested in exploring a potential business partnership with PixelForge Studio. Please contact me to discuss further.\",\n  \"subscribe_newsletter\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inquiry/contact",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"inquiry",
+								"contact"
+							]
+						},
+						"description": "Submit a general inquiry without phone number"
+					}
+				},
+				{
+					"name": "Test Email Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/inquiry/contact/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"inquiry",
+								"contact",
+								"test"
+							]
+						},
+						"description": "Test endpoint to verify email service configuration"
+					}
+				}
+			],
+			"description": "Customer inquiry and contact form endpoints"
+		},
+		{
 			"name": "System",
 			"item": [
 				{
@@ -734,7 +1128,7 @@
 					}
 				},
 				{
-					"name": "Invalid Category",
+					"name": "Invalid Category ID",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -757,8 +1151,8 @@
 									"type": "text"
 								},
 								{
-									"key": "category",
-									"value": "Invalid Category",
+									"key": "category_id",
+									"value": "999",
 									"type": "text"
 								}
 							]
@@ -773,7 +1167,7 @@
 								""
 							]
 						},
-						"description": "Try to create product with invalid category"
+												"description": "Try to create product with invalid category ID"
 					}
 				},
 				{
