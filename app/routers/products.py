@@ -55,15 +55,7 @@ async def create_product(
 ):
     """Create a new product (Admin only)."""
     try:
-        # Validate short_description word count if provided
-        if short_description:
-            word_count = len(short_description.split())
-            if word_count < 4 or word_count > 6:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Short description must be exactly 4-6 words"
-                )
-        
+        # No word count constraint for short_description
         # Validate category exists and is active before creating product
         category = category_crud.get_category_by_id(db, category_id)
         if not category:
@@ -267,14 +259,7 @@ async def update_product(
                 detail="Product not found"
             )
         
-        # Validate short_description word count if provided
-        if short_description:
-            word_count = len(short_description.split())
-            if word_count < 4 or word_count > 6:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Short description must be 4-6 words"
-                )
+    # No word count constraint for short_description
         
         # Handle new image uploads
         image_paths = None

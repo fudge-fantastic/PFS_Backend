@@ -35,9 +35,9 @@ class Product(Base):
     __tablename__ = "products"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(150), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    short_description = Column(String(50), nullable=True)  # 4-6 words limit
+    title = Column(String, nullable=False, index=True)
+    description = Column(String, nullable=True)
+    short_description = Column(String, nullable=True) 
     price = Column(Float, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
     rating = Column(Float, default=0.0)

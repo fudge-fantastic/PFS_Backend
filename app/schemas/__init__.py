@@ -67,13 +67,7 @@ class ProductBase(BaseModel):
     category_id: int = Field(..., gt=0)
     rating: Optional[float] = Field(0.0, ge=0.0, le=5.0)
     
-    @validator('short_description')
-    def validate_short_description(cls, v):
-        if v:
-            word_count = len(v.split())
-            if word_count < 4 or word_count > 6:
-                raise ValueError('Short description must be 4-6 words')
-        return v
+    # Removed word count constraint for short_description
 
 class ProductCreate(ProductBase):
     images: Optional[List[str]] = Field(default=[], max_items=5)
@@ -94,13 +88,7 @@ class ProductUpdate(BaseModel):
     images: Optional[List[str]] = Field(None, max_items=5)
     is_locked: Optional[bool] = None
     
-    @validator('short_description')
-    def validate_short_description(cls, v):
-        if v:
-            word_count = len(v.split())
-            if word_count < 4 or word_count > 6:
-                raise ValueError('Short description must be 4-6 words')
-        return v
+    # Removed word count constraint for short_description
 
 class Product(ProductBase):
     id: int
