@@ -1,50 +1,45 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Enum, Text, JSON, ForeignKey
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.database import Base
+from beanie import Document, Indexed, Link
+from pydantic import Field, EmailStr
+from typing import Optional, List
+from datetime import datetime
 import enum
+from bson import ObjectId
 
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     USER = "USER"
 
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    role = Column(String(50), default="User", nullable=False)  # Store as string
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+class User(Document):
+    email: Indexed(EmailStr, unique=True)
+    hashed_password: str
+    role: str = Field(default="USER")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class Category(Base):
-    __tablename__ = "categories"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationship with products
-    products = relationship("Product", back_populates="category_rel")
+    class Settings:
+        name = "users"
 
-class Product(Base):
-    __tablename__ = "products"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False, index=True)
-    description = Column(String, nullable=True)
-    short_description = Column(String, nullable=True) 
-    price = Column(Float, nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
-    rating = Column(Float, default=0.0)
-    images = Column(JSON, default=list)  # Use JSON for SQLite compatibility
-    is_locked = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationship with category
-    category_rel = relationship("Category", back_populates="products")
+class Category(Document):
+    name: Indexed(str, unique=True)
+    description: Optional[str] = None
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "categories"
+
+class Product(Document):
+    title: Indexed(str)
+    description: Optional[str] = None
+    short_description: Optional[str] = None
+    price: float
+    category_id: Link[Category]
+    rating: float = Field(default=0.0)
+    images: List[str] = Field(default_factory=list)
+    is_locked: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "products"

@@ -1,72 +1,81 @@
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_
 from typing import List, Optional
 from app.models import Product, Category
 from app.schemas import ProductCreate, ProductUpdate
 from app.services.upload import upload_service
+from bson import ObjectId
+from datetime import datetime
 
 class ProductCRUD:
-    def get_product_by_id(self, db: Session, product_id: int) -> Optional[Product]:
+    async def get_product_by_id(self, product_id: str) -> Optional[Product]:
         """Get product by ID with category information."""
-        return db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel)).filter(Product.id == product_id).first()
+        if not ObjectId.is_valid(product_id):
+            return None
+        return await Product.get(ObjectId(product_id), fetch_links=True)
     
-    def get_products(
+    async def get_products(
         self, 
-        db: Session, 
         skip: int = 0, 
         limit: int = 100, 
-        category_id: Optional[int] = None
+        category_id: Optional[str] = None
     ) -> List[Product]:
         """Get all products with pagination and optional category filter."""
-        query = db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel))
-        
-        if category_id:
-            query = query.filter(Product.category_id == category_id)
-        
-        return query.offset(skip).limit(limit).all()
+        if category_id and ObjectId.is_valid(category_id):
+            category = await Category.get(ObjectId(category_id))
+            if not category:
+                return []
+            return await Product.find(Product.category_id == category).skip(skip).limit(limit).to_list()
+        else:
+            return await Product.find().skip(skip).limit(limit).to_list()
     
-    def get_products_count(self, db: Session, category_id: Optional[int] = None) -> int:
+    async def get_products_count(self, category_id: Optional[str] = None) -> int:
         """Get total count of products."""
-        query = db.query(Product)
+        if category_id and ObjectId.is_valid(category_id):
+            category = await Category.get(ObjectId(category_id))
+            if not category:
+                return 0
+            return await Product.find(Product.category_id == category).count()
         
-        if category_id:
-            query = query.filter(Product.category_id == category_id)
-        
-        return query.count()
+        return await Product.find().count()
     
-    def get_unlocked_products(
+    async def get_unlocked_products(
         self, 
-        db: Session, 
         skip: int = 0, 
         limit: int = 100, 
-        category_id: Optional[int] = None
+        category_id: Optional[str] = None
     ) -> List[Product]:
         """Get only unlocked products with pagination and optional category filter."""
-        query = db.query(Product).join(Category, Product.category_id == Category.id).options(joinedload(Product.category_rel)).filter(Product.is_locked == False)
-        
-        if category_id:
-            query = query.filter(Product.category_id == category_id)
-        
-        return query.offset(skip).limit(limit).all()
+        if category_id and ObjectId.is_valid(category_id):
+            category = await Category.get(ObjectId(category_id))
+            if not category:
+                return []
+            return await Product.find(
+                Product.is_locked == False, 
+                Product.category_id == category
+            ).skip(skip).limit(limit).to_list()
+        else:
+            return await Product.find(Product.is_locked == False).skip(skip).limit(limit).to_list()
     
-    def get_unlocked_products_count(self, db: Session, category_id: Optional[int] = None) -> int:
+    async def get_unlocked_products_count(self, category_id: Optional[str] = None) -> int:
         """Get total count of unlocked products."""
-        query = db.query(Product).filter(Product.is_locked == False)
+        if category_id and ObjectId.is_valid(category_id):
+            category = await Category.get(ObjectId(category_id))
+            if not category:
+                return 0
+            return await Product.find(
+                Product.is_locked == False, 
+                Product.category_id == category
+            ).count()
         
-        if category_id:
-            query = query.filter(Product.category_id == category_id)
-        
-        return query.count()
+        return await Product.find(Product.is_locked == False).count()
     
-    def create_product(self, db: Session, product: ProductCreate) -> Product:
+    async def create_product(self, product: ProductCreate) -> Product:
         """Create new product."""
         # Validate that category exists and is active
-        category = db.query(Category).filter(
-            Category.id == product.category_id,
-            Category.is_active == True
-        ).first()
+        if not ObjectId.is_valid(product.category_id):
+            raise ValueError(f"Invalid category ID: {product.category_id}")
         
-        if not category:
+        category = await Category.get(ObjectId(product.category_id))
+        if not category or not category.is_active:
             raise ValueError(f"Category with ID {product.category_id} not found or inactive")
         
         db_product = Product(
@@ -74,22 +83,19 @@ class ProductCRUD:
             description=product.description,
             short_description=product.short_description,
             price=product.price,
-            category_id=product.category_id,
+            category_id=category,
             rating=product.rating,
             images=product.images or [],
             is_locked=False
         )
-        db.add(db_product)
-        db.commit()
-        db.refresh(db_product)
-        
-        # Load the category relationship
-        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
-        return db_product
+        return await db_product.insert()
     
-    def update_product(self, db: Session, product_id: int, product_update: ProductUpdate) -> Optional[Product]:
+    async def update_product(self, product_id: str, product_update: ProductUpdate) -> Optional[Product]:
         """Update product information."""
-        db_product = self.get_product_by_id(db, product_id)
+        if not ObjectId.is_valid(product_id):
+            return None
+        
+        db_product = await self.get_product_by_id(product_id)
         if not db_product:
             return None
         
@@ -99,29 +105,33 @@ class ProductCRUD:
         
         # Validate category if being updated
         if product_update.category_id:
-            category = db.query(Category).filter(
-                Category.id == product_update.category_id,
-                Category.is_active == True
-            ).first()
+            if not ObjectId.is_valid(product_update.category_id):
+                raise ValueError(f"Invalid category ID: {product_update.category_id}")
             
-            if not category:
+            category = await Category.get(ObjectId(product_update.category_id))
+            if not category or not category.is_active:
                 raise ValueError(f"Category with ID {product_update.category_id} not found or inactive")
         
         update_data = product_update.dict(exclude_unset=True)
         
+        # Handle category_id update
+        if "category_id" in update_data:
+            category = await Category.get(ObjectId(update_data["category_id"]))
+            update_data["category_id"] = category
+        
+        update_data["updated_at"] = datetime.utcnow()
+        
         for field, value in update_data.items():
             setattr(db_product, field, value)
         
-        db.commit()
-        db.refresh(db_product)
-        
-        # Reload with category relationship
-        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
-        return db_product
+        return await db_product.save()
     
-    def delete_product(self, db: Session, product_id: int) -> bool:
+    async def delete_product(self, product_id: str) -> bool:
         """Delete product."""
-        db_product = self.get_product_by_id(db, product_id)
+        if not ObjectId.is_valid(product_id):
+            return False
+        
+        db_product = await self.get_product_by_id(product_id)
         if not db_product:
             return False
         
@@ -133,36 +143,33 @@ class ProductCRUD:
         if db_product.images:
             upload_service.delete_product_images(db_product.images)
         
-        db.delete(db_product)
-        db.commit()
+        await db_product.delete()
         return True
     
-    def lock_product(self, db: Session, product_id: int) -> Optional[Product]:
+    async def lock_product(self, product_id: str) -> Optional[Product]:
         """Lock a product to prevent modifications."""
-        db_product = self.get_product_by_id(db, product_id)
+        if not ObjectId.is_valid(product_id):
+            return None
+        
+        db_product = await self.get_product_by_id(product_id)
         if not db_product:
             return None
         
         db_product.is_locked = True
-        db.commit()
-        db.refresh(db_product)
-        
-        # Reload with category relationship
-        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
-        return db_product
+        db_product.updated_at = datetime.utcnow()
+        return await db_product.save()
     
-    def unlock_product(self, db: Session, product_id: int) -> Optional[Product]:
+    async def unlock_product(self, product_id: str) -> Optional[Product]:
         """Unlock a product to allow modifications."""
-        db_product = self.get_product_by_id(db, product_id)
+        if not ObjectId.is_valid(product_id):
+            return None
+        
+        db_product = await self.get_product_by_id(product_id)
         if not db_product:
             return None
         
         db_product.is_locked = False
-        db.commit()
-        db.refresh(db_product)
-        
-        # Reload with category relationship
-        db_product = db.query(Product).options(joinedload(Product.category_rel)).filter(Product.id == db_product.id).first()
-        return db_product
+        db_product.updated_at = datetime.utcnow()
+        return await db_product.save()
 
 product_crud = ProductCRUD()

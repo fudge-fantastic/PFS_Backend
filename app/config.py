@@ -2,8 +2,9 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    # Database
-    database_url: str = "postgresql://username:password@localhost:5432/pixelforge_db"
+    # MongoDB Database
+    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_database: str = "pixelforge_db"
     
     # JWT
     secret_key: str = "your-super-secret-jwt-key-change-this-in-production"

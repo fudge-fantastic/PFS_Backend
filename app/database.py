@@ -1,22 +1,30 @@
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 from app.config import settings
+from typing import Optional
+import asyncio
 
-# Handle different database types
-if settings.database_url.startswith("sqlite"):
-    engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(settings.database_url)
+class Database:
+    client: Optional[AsyncIOMotorClient] = None
+    database = None
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db = Database()
 
-Base = declarative_base()
-metadata = MetaData()
+async def connect_to_mongo():
+    """Create database connection"""
+    db.client = AsyncIOMotorClient(settings.mongodb_url)
+    db.database = db.client[settings.mongodb_database]
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def close_mongo_connection():
+    """Close database connection"""
+    if db.client:
+        db.client.close()
+
+async def init_db():
+    """Initialize database with Beanie"""
+    from app.models import User, Product, Category
+    await init_beanie(database=db.database, document_models=[User, Product, Category])
+
+def get_database():
+    """Dependency to get database instance"""
+    return db.database

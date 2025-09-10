@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Database initialization script for PixelForge Backend
-Creates admin user and sample data
+MongoDB database initialization script for PixelForge Backend
+Creates admin user and initializes MongoDB collections
 """
 
 import asyncio
@@ -11,26 +11,24 @@ import os
 # Add the parent directory to the path to import app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine
-from app.models import Base, User
-from app.services.auth import get_password_hash
+from app.database import connect_to_mongo, close_mongo_connection, init_db
+from app.models import User
 from app.crud.user import user_crud
 from app.schemas import UserCreate
 
-def create_tables():
-    """Create database tables."""
-    print("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    print("✓ Database tables created successfully")
+async def init_mongodb():
+    """Initialize MongoDB connection and Beanie."""
+    print("Connecting to MongoDB...")
+    await connect_to_mongo()
+    await init_db()
+    print("✓ MongoDB connection and Beanie initialized successfully")
 
-def create_admin_user():
+async def create_admin_user():
     """Create default admin user."""
-    db = SessionLocal()
     try:
         # Check if admin already exists
         admin_email = "admin@pfs.in"
-        existing_admin = user_crud.get_user_by_email(db, admin_email)
+        existing_admin = await user_crud.get_user_by_email(admin_email)
         
         if existing_admin:
             print(f"✓ Admin user already exists: {admin_email}")
@@ -42,75 +40,81 @@ def create_admin_user():
             password="admin1234"  # Change this in production
         )
         
-        admin_user = user_crud.create_user(db, admin_data)
+        admin_user = await user_crud.create_user(admin_data)
         
-        # Manually set admin role
-        admin_user.role = "ADMIN"  # Use uppercase to match database
-        db.commit()
-        db.refresh(admin_user)
+        # Update role to ADMIN
+        admin_user.role = "ADMIN"
+        await admin_user.save()
         
         print(f"✓ Admin user created successfully: {admin_email}")
-        print(f"  Default password: admin (CHANGE THIS IN PRODUCTION)")
+        print(f"  Default password: admin1234 (CHANGE THIS IN PRODUCTION)")
         return admin_user
         
     except Exception as e:
         print(f"✗ Failed to create admin user: {str(e)}")
-        db.rollback()
         return None
-    finally:
-        db.close()
 
-# def create_sample_users():
-#     """Create sample regular users."""
-#     db = SessionLocal()
-#     try:
-#         sample_users = [
-#             {"email": "user1@pixelforgestudio.in", "password": "user123456"},
-#             {"email": "user2@pixelforgestudio.in", "password": "user123456"},
-#         ]
+async def create_sample_categories():
+    """Create sample categories for products."""
+    from app.crud.category import category_crud
+    from app.schemas import CategoryCreate
+    
+    try:
+        categories = [
+            {"name": "Photo Magnets", "description": "Custom photo magnets for personal use"},
+            {"name": "Fridge Magnets", "description": "Decorative fridge magnets"},
+            {"name": "Retro Prints", "description": "Vintage style prints and posters"}
+        ]
         
-#         created_users = []
-#         for user_data in sample_users:
-#             existing_user = user_crud.get_user_by_email(db, user_data["email"])
-#             if existing_user:
-#                 print(f"✓ Sample user already exists: {user_data['email']}")
-#                 created_users.append(existing_user)
-#                 continue
+        created_categories = []
+        for cat_data in categories:
+            existing_category = await category_crud.get_category_by_name(cat_data["name"])
+            if existing_category:
+                print(f"✓ Category already exists: {cat_data['name']}")
+                created_categories.append(existing_category)
+                continue
             
-#             user = user_crud.create_user(db, UserCreate(**user_data))
-#             created_users.append(user)
-#             print(f"✓ Sample user created: {user_data['email']}")
+            category = await category_crud.create_category(CategoryCreate(**cat_data))
+            created_categories.append(category)
+            print(f"✓ Category created: {cat_data['name']}")
         
-#         return created_users
+        return created_categories
         
-#     except Exception as e:
-#         print(f"✗ Failed to create sample users: {str(e)}")
-#         db.rollback()
-#         return []
-#     finally:
-#         db.close()
+    except Exception as e:
+        print(f"✗ Failed to create sample categories: {str(e)}")
+        return []
 
-def main():
+async def main():
     """Main initialization function."""
-    print("🚀 Initializing PixelForge Backend Database...")
+    print("🚀 Initializing PixelForge Backend MongoDB Database...")
     print("=" * 50)
     
-    # Create tables
-    create_tables()
-    
-    # Create admin user
-    admin = create_admin_user()
-    
-    print("=" * 50)
-    print("📋 Database Initialization Summary:")
-    print(f"   • Tables: Created/Verified")
-    print(f"   • Admin users: {1 if admin else 0}")
-    print()
-    print("🔐 Default Credentials:")
-    print("   Admin: admin@pfs.in / admin1234")
-    print()
-    print("⚠️  IMPORTANT: Change default passwords in production!")
-    print("✅ Database initialization completed successfully!")
+    try:
+        # Initialize MongoDB
+        await init_mongodb()
+        
+        # Create admin user
+        admin = await create_admin_user()
+        
+        # Create sample categories
+        categories = await create_sample_categories()
+        
+        print("=" * 50)
+        print("📋 Database Initialization Summary:")
+        print(f"   • MongoDB: Connected and initialized")
+        print(f"   • Admin users: {1 if admin else 0}")
+        print(f"   • Categories: {len(categories)}")
+        print()
+        print("🔐 Default Credentials:")
+        print("   Admin: admin@pfs.in / admin1234")
+        print()
+        print("⚠️  IMPORTANT: Change default passwords in production!")
+        print("✅ MongoDB initialization completed successfully!")
+        
+    except Exception as e:
+        print(f"✗ Failed to initialize database: {str(e)}")
+    finally:
+        await close_mongo_connection()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

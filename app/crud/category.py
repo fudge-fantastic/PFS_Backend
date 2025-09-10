@@ -1,35 +1,39 @@
-from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.models import Category
+from app.models import Category, Product
 from app.schemas import CategoryCreate, CategoryUpdate
+from bson import ObjectId
+from datetime import datetime
 
 class CategoryCRUD:
-    def get_category_by_id(self, db: Session, category_id: int) -> Optional[Category]:
+    async def get_category_by_id(self, category_id: str) -> Optional[Category]:
         """Get category by ID."""
-        return db.query(Category).filter(Category.id == category_id).first()
+        if not ObjectId.is_valid(category_id):
+            return None
+        return await Category.get(ObjectId(category_id))
     
-    def get_category_by_name(self, db: Session, name: str) -> Optional[Category]:
+    async def get_category_by_name(self, name: str) -> Optional[Category]:
         """Get category by name."""
-        return db.query(Category).filter(Category.name == name).first()
+        return await Category.find_one(Category.name == name)
     
-    def get_categories(self, db: Session, skip: int = 0, limit: int = 100, active_only: bool = False) -> List[Category]:
+    async def get_categories(self, skip: int = 0, limit: int = 100, active_only: bool = False) -> List[Category]:
         """Get list of categories with optional pagination and active filter."""
-        query = db.query(Category)
         if active_only:
-            query = query.filter(Category.is_active == True)
-        return query.offset(skip).limit(limit).all()
+            query = Category.find(Category.is_active == True)
+        else:
+            query = Category.find_all()
+        
+        return await query.skip(skip).limit(limit).to_list()
     
-    def get_categories_count(self, db: Session, active_only: bool = False) -> int:
+    async def get_categories_count(self, active_only: bool = False) -> int:
         """Get total count of categories."""
-        query = db.query(Category)
         if active_only:
-            query = query.filter(Category.is_active == True)
-        return query.count()
+            return await Category.find(Category.is_active == True).count()
+        return await Category.count()
     
-    def create_category(self, db: Session, category: CategoryCreate) -> Category:
+    async def create_category(self, category: CategoryCreate) -> Category:
         """Create a new category."""
         # Check if category name already exists
-        existing_category = self.get_category_by_name(db, category.name)
+        existing_category = await self.get_category_by_name(category.name)
         if existing_category:
             raise ValueError(f"Category with name '{category.name}' already exists")
         
@@ -38,63 +42,67 @@ class CategoryCRUD:
             description=category.description,
             is_active=True
         )
-        db.add(db_category)
-        db.commit()
-        db.refresh(db_category)
-        return db_category
+        return await db_category.insert()
     
-    def update_category(self, db: Session, category_id: int, category_update: CategoryUpdate) -> Optional[Category]:
+    async def update_category(self, category_id: str, category_update: CategoryUpdate) -> Optional[Category]:
         """Update an existing category."""
-        db_category = self.get_category_by_id(db, category_id)
+        if not ObjectId.is_valid(category_id):
+            return None
+        
+        db_category = await self.get_category_by_id(category_id)
         if not db_category:
             return None
         
         # Check if new name conflicts with existing category
         if category_update.name and category_update.name != db_category.name:
-            existing_category = self.get_category_by_name(db, category_update.name)
+            existing_category = await self.get_category_by_name(category_update.name)
             if existing_category:
                 raise ValueError(f"Category with name '{category_update.name}' already exists")
         
         # Update fields
         update_data = category_update.dict(exclude_unset=True)
+        update_data["updated_at"] = datetime.utcnow()
+        
         for field, value in update_data.items():
             setattr(db_category, field, value)
         
-        db.commit()
-        db.refresh(db_category)
-        return db_category
+        return await db_category.save()
     
-    def delete_category(self, db: Session, category_id: int) -> bool:
+    async def delete_category(self, category_id: str) -> bool:
         """Delete a category (soft delete by setting is_active=False)."""
-        db_category = self.get_category_by_id(db, category_id)
+        if not ObjectId.is_valid(category_id):
+            return False
+        
+        db_category = await self.get_category_by_id(category_id)
         if not db_category:
             return False
         
         # Check if category has associated products
-        from app.models import Product
-        product_count = db.query(Product).filter(Product.category_id == category_id).count()
+        product_count = await Product.find(Product.category_id == db_category).count()
         if product_count > 0:
             raise ValueError(f"Cannot delete category. It has {product_count} associated products.")
         
         # Soft delete
         db_category.is_active = False
-        db.commit()
+        db_category.updated_at = datetime.utcnow()
+        await db_category.save()
         return True
     
-    def hard_delete_category(self, db: Session, category_id: int) -> bool:
+    async def hard_delete_category(self, category_id: str) -> bool:
         """Permanently delete a category (use with caution)."""
-        db_category = self.get_category_by_id(db, category_id)
+        if not ObjectId.is_valid(category_id):
+            return False
+        
+        db_category = await self.get_category_by_id(category_id)
         if not db_category:
             return False
         
         # Check if category has associated products
-        from app.models import Product
-        product_count = db.query(Product).filter(Product.category_id == category_id).count()
+        product_count = await Product.find(Product.category_id == db_category).count()
         if product_count > 0:
             raise ValueError(f"Cannot delete category. It has {product_count} associated products.")
         
-        db.delete(db_category)
-        db.commit()
+        await db_category.delete()
         return True
 
 # Create global instance

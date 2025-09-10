@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
 from app.schemas import User, UserListResponse, APIResponse
 from app.crud.user import user_crud
 from app.dependencies.auth import get_current_user, get_current_admin_user
@@ -18,9 +16,9 @@ async def get_current_user_info(
         success=True,
         message="User details retrieved successfully",
         data={
-            "id": current_user.id,
+            "id": str(current_user.id),
             "email": current_user.email,
-            "role": current_user.role,  # Already a string
+            "role": current_user.role,
             "created_at": current_user.created_at.isoformat(),
             "updated_at": current_user.updated_at.isoformat()
         }
@@ -30,20 +28,19 @@ async def get_current_user_info(
 async def list_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """List all users (Admin only)."""
     try:
-        users = user_crud.get_users(db, skip=skip, limit=limit)
-        total_count = user_crud.get_users_count(db)
+        users = await user_crud.get_users(skip=skip, limit=limit)
+        total_count = await user_crud.get_users_count()
         
         users_data = []
         for user in users:
             users_data.append({
-                "id": user.id,
+                "id": str(user.id),
                 "email": user.email,
-                "role": user.role,  # Already a string
+                "role": user.role,
                 "created_at": user.created_at.isoformat(),
                 "updated_at": user.updated_at.isoformat()
             })
@@ -62,12 +59,11 @@ async def list_users(
 
 @router.get("/{user_id}", response_model=APIResponse)
 async def get_user_by_id(
-    user_id: int,
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    user_id: str,
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Get user by ID (Admin only)."""
-    user = user_crud.get_user_by_id(db, user_id)
+    user = await user_crud.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -78,9 +74,9 @@ async def get_user_by_id(
         success=True,
         message="User details retrieved successfully",
         data={
-            "id": user.id,
+            "id": str(user.id),
             "email": user.email,
-            "role": user.role,  # Already a string
+            "role": user.role,
             "created_at": user.created_at.isoformat(),
             "updated_at": user.updated_at.isoformat()
         }

@@ -25,7 +25,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(None, min_length=8)
 
 class User(UserBase):
-    id: int
+    id: str
     role: UserRole
     created_at: datetime
     updated_at: datetime
@@ -50,7 +50,7 @@ class CategoryUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 class Category(CategoryBase):
-    id: int
+    id: str
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -64,7 +64,7 @@ class ProductBase(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     short_description: Optional[str] = Field(None, max_length=50)
     price: float = Field(..., gt=0)
-    category_id: int = Field(..., gt=0)
+    category_id: str
     rating: Optional[float] = Field(0.0, ge=0.0, le=5.0)
     
     # Removed word count constraint for short_description
@@ -83,7 +83,7 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     short_description: Optional[str] = Field(None, max_length=50)
     price: Optional[float] = Field(None, gt=0)
-    category_id: Optional[int] = Field(None, gt=0)
+    category_id: Optional[str] = None
     rating: Optional[float] = Field(None, ge=0.0, le=5.0)
     images: Optional[List[str]] = Field(None, max_items=5)
     is_locked: Optional[bool] = None
@@ -91,7 +91,7 @@ class ProductUpdate(BaseModel):
     # Removed word count constraint for short_description
 
 class Product(ProductBase):
-    id: int
+    id: str
     images: List[str]
     is_locked: bool
     created_at: datetime
@@ -166,12 +166,12 @@ class APIResponse(BaseModel):
     data: Optional[dict] = None
 
 class ProductResponse(BaseModel):
-    id: int
+    id: str
     title: str
     description: Optional[str]
     short_description: Optional[str]
     price: float
-    category_id: int
+    category_id: str
     category_name: Optional[str]
     rating: float
     images: List[str]
@@ -191,11 +191,11 @@ class ProductListResponse(BaseModel):
 class UserListResponse(BaseModel):
     success: bool
     message: str
-    data: List[User]
+    data: List[dict]
     total: int
 
 class CategoryListResponse(BaseModel):
     success: bool
     message: str
-    data: List[Category]
+    data: List[dict]
     total: int

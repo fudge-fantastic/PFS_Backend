@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 from datetime import timedelta
-from app.database import get_db
 from app.schemas import UserCreate, User, Token, LoginRequest, APIResponse
 from app.crud.user import user_crud
 from app.services.auth import create_access_token
@@ -12,13 +10,10 @@ from app.config import settings
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(
-    user: UserCreate,
-    db: Session = Depends(get_db)
-):
+async def register_user(user: UserCreate):
     """Register a new user."""
     # Check if user already exists
-    existing_user = user_crud.get_user_by_email(db, email=user.email)
+    existing_user = await user_crud.get_user_by_email(email=user.email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -27,7 +22,7 @@ async def register_user(
     
     # Create new user
     try:
-        db_user = user_crud.create_user(db, user)
+        db_user = await user_crud.create_user(user)
         
         # Send welcome email (async, don't block on failure)
         try:
@@ -48,9 +43,9 @@ async def register_user(
                 "access_token": access_token,
                 "token_type": "bearer",
                 "user": {
-                    "id": db_user.id,
+                    "id": str(db_user.id),
                     "email": db_user.email,
-                    "role": db_user.role  # Already a string
+                    "role": db_user.role
                 }
             }
         )
@@ -61,12 +56,9 @@ async def register_user(
         )
 
 @router.post("/login", response_model=APIResponse)
-async def login_user(
-    login_data: LoginRequest,
-    db: Session = Depends(get_db)
-):
+async def login_user(login_data: LoginRequest):
     """Authenticate user and return JWT token."""
-    user = user_crud.authenticate_user(db, login_data.email, login_data.password)
+    user = await user_crud.authenticate_user(login_data.email, login_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,20 +78,17 @@ async def login_user(
             "access_token": access_token,
             "token_type": "bearer",
             "user": {
-                "id": user.id,
+                "id": str(user.id),
                 "email": user.email,
-                "role": user.role  # Already a string
+                "role": user.role
             }
         }
     )
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """OAuth2 compatible token endpoint."""
-    user = user_crud.authenticate_user(db, form_data.username, form_data.password)
+    user = await user_crud.authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

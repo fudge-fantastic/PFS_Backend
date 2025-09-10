@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
-from sqlalchemy.orm import Session
 from typing import List, Optional
 import time
-from app.database import get_db
 from app.schemas import (
     ProductCreate, ProductUpdate, Product, ProductResponse,
     ProductListResponse, APIResponse
@@ -12,7 +10,7 @@ from app.crud.category import category_crud
 from app.dependencies.auth import get_current_user, get_current_admin_user
 from app.services.upload import upload_service
 from app.services.email import email_service
-from app.models import User as UserModel
+from app.models import User as UserModel, Product as ProductModel
 from app.config import settings
 
 # Import ImageKit service for authentication
@@ -24,16 +22,22 @@ except ImportError:
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
-def product_to_response(product: Product) -> ProductResponse:
+async def product_to_response(product: ProductModel) -> ProductResponse:
     """Convert Product model to ProductResponse with category name."""
+    # Fetch category name if needed
+    category_name = None
+    if product.category_id:
+        await product.fetch_link(ProductModel.category_id)
+        category_name = product.category_id.name if product.category_id else None
+    
     return ProductResponse(
-        id=product.id,
+        id=str(product.id),
         title=product.title,
         description=product.description,
         short_description=product.short_description,
         price=product.price,
-        category_id=product.category_id,
-        category_name=product.category_rel.name if product.category_rel else None,
+        category_id=str(product.category_id.id) if product.category_id else None,
+        category_name=category_name,
         rating=product.rating,
         images=product.images,
         is_locked=product.is_locked,
@@ -47,17 +51,15 @@ async def create_product(
     description: Optional[str] = Form(None, max_length=1000),
     short_description: Optional[str] = Form(None, max_length=50),
     price: float = Form(..., gt=0),
-    category_id: int = Form(..., gt=0),
+    category_id: str = Form(...),
     rating: float = Form(0.0, ge=0.0, le=5.0),
     images: List[UploadFile] = File(default=[], description="Upload product images (max 5 files)"),
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Create a new product (Admin only)."""
     try:
-        # No word count constraint for short_description
         # Validate category exists and is active before creating product
-        category = category_crud.get_category_by_id(db, category_id)
+        category = await category_crud.get_category_by_id(category_id)
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -108,10 +110,10 @@ async def create_product(
             else:
                 raise
         
-        db_product = product_crud.create_product(db, product_data)
+        db_product = await product_crud.create_product(product_data)
         
         # Convert to response format with category name
-        product_data = product_to_response(db_product)
+        product_data = await product_to_response(db_product)
         
         return APIResponse(
             success=True,
@@ -146,25 +148,24 @@ async def create_product(
 async def list_unlocked_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    category_id: Optional[int] = Query(None, gt=0),
-    db: Session = Depends(get_db)
+    category_id: Optional[str] = Query(None)
 ):
     """List only unlocked products with optional category filter."""
     try:
         # Validate category if provided
         if category_id:
-            category = category_crud.get_category_by_id(db, category_id)
+            category = await category_crud.get_category_by_id(category_id)
             if not category or not category.is_active:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Category with ID {category_id} not found or inactive"
                 )
         
-        products = product_crud.get_unlocked_products(db, skip=skip, limit=limit, category_id=category_id)
-        total_count = product_crud.get_unlocked_products_count(db, category_id=category_id)
+        products = await product_crud.get_unlocked_products(skip=skip, limit=limit, category_id=category_id)
+        total_count = await product_crud.get_unlocked_products_count(category_id=category_id)
         
         # Convert products to response format with category names
-        products_data = [product_to_response(product) for product in products]
+        products_data = [await product_to_response(product) for product in products]
         
         return ProductListResponse(
             success=True,
@@ -182,25 +183,24 @@ async def list_unlocked_products(
 async def list_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    category_id: Optional[int] = Query(None, gt=0),
-    db: Session = Depends(get_db)
+    category_id: Optional[str] = Query(None)
 ):
     """List all products with optional category filter."""
     try:
         # Validate category if provided
         if category_id:
-            category = category_crud.get_category_by_id(db, category_id)
+            category = await category_crud.get_category_by_id(category_id)
             if not category or not category.is_active:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Category with ID {category_id} not found or inactive"
                 )
         
-        products = product_crud.get_products(db, skip=skip, limit=limit, category_id=category_id)
-        total_count = product_crud.get_products_count(db, category_id=category_id)
+        products = await product_crud.get_products(skip=skip, limit=limit, category_id=category_id)
+        total_count = await product_crud.get_products_count(category_id=category_id)
         
         # Convert products to response format with category names
-        products_data = [product_to_response(product) for product in products]
+        products_data = [await product_to_response(product) for product in products]
         
         return ProductListResponse(
             success=True,
@@ -215,12 +215,9 @@ async def list_products(
         )
 
 @router.get("/{product_id}", response_model=APIResponse)
-async def get_product(
-    product_id: int,
-    db: Session = Depends(get_db)
-):
+async def get_product(product_id: str):
     """Get product details by ID."""
-    product = product_crud.get_product_by_id(db, product_id)
+    product = await product_crud.get_product_by_id(product_id)
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -228,7 +225,7 @@ async def get_product(
         )
     
     # Convert to response format with category name
-    product_data = product_to_response(product)
+    product_data = await product_to_response(product)
     
     return APIResponse(
         success=True,
@@ -238,21 +235,20 @@ async def get_product(
 
 @router.put("/{product_id}", response_model=APIResponse)
 async def update_product(
-    product_id: int,
+    product_id: str,
     title: Optional[str] = Form(None, max_length=150),
     description: Optional[str] = Form(None, max_length=1000),
     short_description: Optional[str] = Form(None, max_length=50),
     price: Optional[float] = Form(None, gt=0),
-    category_id: Optional[int] = Form(None, gt=0),
+    category_id: Optional[str] = Form(None),
     rating: Optional[float] = Form(None, ge=0.0, le=5.0),
     images: List[UploadFile] = File(default=[], description="Upload product images (max 5 files, replaces existing)"),
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Update product (Admin only)."""
     try:
         # Check if product exists
-        existing_product = product_crud.get_product_by_id(db, product_id)
+        existing_product = await product_crud.get_product_by_id(product_id)
         if not existing_product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -305,10 +301,10 @@ async def update_product(
             )
         
         product_update = ProductUpdate(**update_data)
-        updated_product = product_crud.update_product(db, product_id, product_update)
+        updated_product = await product_crud.update_product(product_id, product_update)
         
         # Convert to response format with category name
-        product_data = product_to_response(updated_product)
+        product_data = await product_to_response(updated_product)
         
         return APIResponse(
             success=True,
@@ -325,13 +321,12 @@ async def update_product(
 
 @router.delete("/{product_id}", response_model=APIResponse)
 async def delete_product(
-    product_id: int,
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    product_id: str,
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Delete product (Admin only)."""
     try:
-        success = product_crud.delete_product(db, product_id)
+        success = await product_crud.delete_product(product_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -353,27 +348,32 @@ async def delete_product(
 
 @router.patch("/{product_id}/lock", response_model=APIResponse)
 async def lock_product(
-    product_id: int,
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    product_id: str,
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Lock product to prevent modifications (Admin only)."""
     try:
-        locked_product = product_crud.lock_product(db, product_id)
+        locked_product = await product_crud.lock_product(product_id)
         if not locked_product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Product not found"
             )
         
+        # Fetch category name
+        category_name = None
+        if locked_product.category_id:
+            await locked_product.fetch_link(ProductModel.category_id)
+            category_name = locked_product.category_id.name if locked_product.category_id else None
+        
         return APIResponse(
             success=True,
             message="Product locked successfully",
             data={
-                "id": locked_product.id,
+                "id": str(locked_product.id),
                 "title": locked_product.title,
-                "category_id": locked_product.category_id,
-                "category_name": locked_product.category_rel.name if locked_product.category_rel else None,
+                "category_id": str(locked_product.category_id.id) if locked_product.category_id else None,
+                "category_name": category_name,
                 "is_locked": locked_product.is_locked
             }
         )
@@ -385,27 +385,32 @@ async def lock_product(
 
 @router.patch("/{product_id}/unlock", response_model=APIResponse)
 async def unlock_product(
-    product_id: int,
-    current_user: UserModel = Depends(get_current_admin_user),
-    db: Session = Depends(get_db)
+    product_id: str,
+    current_user: UserModel = Depends(get_current_admin_user)
 ):
     """Unlock product to allow modifications (Admin only)."""
     try:
-        unlocked_product = product_crud.unlock_product(db, product_id)
+        unlocked_product = await product_crud.unlock_product(product_id)
         if not unlocked_product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Product not found"
             )
         
+        # Fetch category name
+        category_name = None
+        if unlocked_product.category_id:
+            await unlocked_product.fetch_link(ProductModel.category_id)
+            category_name = unlocked_product.category_id.name if unlocked_product.category_id else None
+        
         return APIResponse(
             success=True,
             message="Product unlocked successfully",
             data={
-                "id": unlocked_product.id,
+                "id": str(unlocked_product.id),
                 "title": unlocked_product.title,
-                "category_id": unlocked_product.category_id,
-                "category_name": unlocked_product.category_rel.name if unlocked_product.category_rel else None,
+                "category_id": str(unlocked_product.category_id.id) if unlocked_product.category_id else None,
+                "category_name": category_name,
                 "is_locked": unlocked_product.is_locked
             }
         )

@@ -4,8 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 import logging
-from app.database import engine
-from app.models import Base
+from app.database import connect_to_mongo, close_mongo_connection, init_db
 from app.routers import auth, users, products, inquiry, categories
 from app.config import settings
 
@@ -19,9 +18,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up PixelForge Backend...")
     
-    # Create database tables
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created/verified")
+    # Connect to MongoDB
+    await connect_to_mongo()
+    logger.info("Connected to MongoDB")
+    
+    # Initialize database with Beanie
+    await init_db()
+    logger.info("Database initialized with Beanie")
     
     # Create upload directories
     os.makedirs(settings.upload_dir, exist_ok=True)
@@ -32,6 +35,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down PixelForge Backend...")
+    await close_mongo_connection()
+    logger.info("MongoDB connection closed")
 
 # Create FastAPI app
 app = FastAPI(

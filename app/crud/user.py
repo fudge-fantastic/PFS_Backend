@@ -1,43 +1,45 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from typing import List, Optional
 from app.models import User, UserRole
 from app.schemas import UserCreate, UserUpdate
 from app.services.auth import get_password_hash, verify_password
+from bson import ObjectId
+from datetime import datetime
 
 class UserCRUD:
-    def get_user_by_id(self, db: Session, user_id: int) -> Optional[User]:
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
         """Get user by ID."""
-        return db.query(User).filter(User.id == user_id).first()
+        if not ObjectId.is_valid(user_id):
+            return None
+        return await User.get(ObjectId(user_id))
     
-    def get_user_by_email(self, db: Session, email: str) -> Optional[User]:
+    async def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email."""
-        return db.query(User).filter(User.email == email).first()
+        return await User.find_one(User.email == email)
     
-    def get_users(self, db: Session, skip: int = 0, limit: int = 100) -> List[User]:
+    async def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """Get all users with pagination."""
-        return db.query(User).offset(skip).limit(limit).all()
+        return await User.find_all().skip(skip).limit(limit).to_list()
     
-    def get_users_count(self, db: Session) -> int:
+    async def get_users_count(self) -> int:
         """Get total count of users."""
-        return db.query(User).count()
+        return await User.count()
     
-    def create_user(self, db: Session, user: UserCreate) -> User:
+    async def create_user(self, user: UserCreate) -> User:
         """Create new user."""
         hashed_password = get_password_hash(user.password)
         db_user = User(
             email=user.email,
             hashed_password=hashed_password,
-            role="USER"  # Default role as uppercase string
+            role="USER"
         )
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return db_user
+        return await db_user.insert()
     
-    def update_user(self, db: Session, user_id: int, user_update: UserUpdate) -> Optional[User]:
+    async def update_user(self, user_id: str, user_update: UserUpdate) -> Optional[User]:
         """Update user information."""
-        db_user = self.get_user_by_id(db, user_id)
+        if not ObjectId.is_valid(user_id):
+            return None
+        
+        db_user = await self.get_user_by_id(user_id)
         if not db_user:
             return None
         
@@ -45,35 +47,37 @@ class UserCRUD:
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
         
+        update_data["updated_at"] = datetime.utcnow()
+        
         for field, value in update_data.items():
             setattr(db_user, field, value)
         
-        db.commit()
-        db.refresh(db_user)
-        return db_user
+        return await db_user.save()
     
-    def delete_user(self, db: Session, user_id: int) -> bool:
+    async def delete_user(self, user_id: str) -> bool:
         """Delete user."""
-        db_user = self.get_user_by_id(db, user_id)
+        if not ObjectId.is_valid(user_id):
+            return False
+        
+        db_user = await self.get_user_by_id(user_id)
         if not db_user:
             return False
         
-        db.delete(db_user)
-        db.commit()
+        await db_user.delete()
         return True
     
-    def authenticate_user(self, db: Session, email: str, password: str) -> Optional[User]:
+    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
         """Authenticate user with email and password."""
-        print(f"Authenticating user: {email}, {password}")  # Debug: show email
-        user = self.get_user_by_email(db, email)
+        print(f"Authenticating user: {email}, {password}")
+        user = await self.get_user_by_email(email)
         if not user:
-            print("User not found.")  # Debug: user not found
+            print("User not found.")
             return None
-        print(f"User found: {user.email}")  # Debug: user found
+        print(f"User found: {user.email}")
         if not verify_password(password, user.hashed_password):
-            print("Password verification failed.")  # Debug: password failed
+            print("Password verification failed.")
             return None
-        print("Authentication successful.")  # Debug: success
+        print("Authentication successful.")
         return user
 
 user_crud = UserCRUD()

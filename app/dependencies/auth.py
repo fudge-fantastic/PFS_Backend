@@ -1,16 +1,13 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from app.database import get_db
 from app.services.auth import verify_token
 from app.crud.user import user_crud
 from app.models import User
 
 security = HTTPBearer()
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> User:
     """Get current authenticated user."""
     token = credentials.credentials
@@ -23,7 +20,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    user = user_crud.get_user_by_email(db, email=email)
+    user = await user_crud.get_user_by_email(email=email)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -33,7 +30,7 @@ def get_current_user(
     
     return user
 
-def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """Get current user and verify admin role."""
     # Handle both "Admin" and "ADMIN" for backward compatibility
     if current_user.role.lower() not in ["admin"]:
@@ -43,7 +40,7 @@ def get_current_admin_user(current_user: User = Depends(get_current_user)) -> Us
         )
     return current_user
 
-def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """Get current active user (placeholder for future user status)."""
     # In the future, you might add an 'is_active' field to User model
     return current_user
